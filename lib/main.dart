@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 void main() {
@@ -40,6 +42,153 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const fifteen = 15 * 60;
+  static const twenty = 20 * 60;
+  static const twentyFive = 25 * 60;
+  static const thirty = 30 * 60;
+  static const thirtyFive = 35 * 60;
+  static const breakTime = 5 * 60;
+
+  List<Map<String, dynamic>> list = [
+    {
+      "value": 'fifteen',
+      "isSelectd": false,
+      "second": fifteen,
+    },
+    {
+      "value": 'twenty',
+      "isSelectd": false,
+      "second": twenty,
+    },
+    {
+      "value": 'twentyFive',
+      "isSelectd": false,
+      "second": twentyFive,
+    },
+    {
+      "value": 'thirty',
+      "isSelectd": false,
+      "second": thirty,
+    },
+    {
+      "value": 'thirtyFive',
+      "isSelectd": false,
+      "second": thirtyFive,
+    }
+  ];
+
+  int totalSeconds = 3;
+  // late int totalSeconds;
+  int round = 0;
+  int goal = 0;
+  late Timer timer;
+  bool isRunning = false;
+  bool isBreakItem = false;
+
+  String formatMin(int seconds) {
+    var duration = Duration(seconds: seconds);
+    return duration.toString().split('.').first.substring(2, 4);
+  }
+
+  String formatSecond(int seconds) {
+    var duration = Duration(seconds: seconds);
+    return duration.toString().split('.').first.substring(5, 7);
+  }
+
+  void handleClickMin(String value) {
+    setState(() {
+      list = list.map((item) {
+        if (item['value'] == value) {
+          var newItem = {
+            "value": item['value'],
+            "isSelectd": true,
+            "second": item['second']
+          };
+          totalSeconds = item['second'];
+          return newItem;
+        } else {
+          var newItem = {
+            "value": item['value'],
+            "isSelectd": false,
+            "second": item['second']
+          };
+          return newItem;
+        }
+      }).toList();
+    });
+  }
+
+  void onTick(Timer timer) {
+    if (totalSeconds == 0 && !isBreakItem) {
+      timer.cancel();
+      setState(() {
+        isRunning = false;
+        isBreakItem = true;
+        totalSeconds = breakTime;
+      });
+      onStartPressed();
+      if (round == 4) {
+        setState(() {
+          round = 0;
+          goal = goal + 1;
+        });
+      } else {
+        setState(() {
+          round = round + 1;
+        });
+      }
+    } else if (totalSeconds == 0 && isBreakItem) {
+      timer.cancel();
+      List<Map<String, dynamic>> selectedItem =
+          list.where((element) => element['isSelectd'] == true).toList();
+      int selectedSecond = selectedItem.first['second'];
+      setState(() {
+        isRunning = false;
+        isBreakItem = false;
+        totalSeconds = selectedSecond;
+      });
+    } else {
+      setState(() {
+        totalSeconds = totalSeconds - 1;
+      });
+    }
+  }
+
+  void onStartPressed() {
+    timer = Timer.periodic(
+      const Duration(
+        seconds: 1,
+      ),
+      onTick,
+    );
+    setState(() {
+      isRunning = true;
+    });
+  }
+
+  void onPausePressed() {
+    timer.cancel();
+    setState(() {
+      isRunning = false;
+    });
+  }
+
+  void onReset() {
+    setState(() {
+      round = 0;
+      goal = 0;
+      isRunning = false;
+      isBreakItem = false;
+    });
+    handleClickMin('fifteen');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    handleClickMin('fifteen');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -64,6 +213,19 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           Flexible(
+            flex: 1,
+            child: Center(
+              child: IconButton(
+                iconSize: 30,
+                color: Colors.white,
+                onPressed: onReset,
+                icon: const Icon(
+                  Icons.restart_alt,
+                ),
+              ),
+            ),
+          ),
+          Flexible(
               flex: 8,
               child: Padding(
                 padding: const EdgeInsets.all(30),
@@ -80,7 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            '12',
+                            formatMin(totalSeconds),
                             style: TextStyle(
                               color: Theme.of(context).colorScheme.background,
                               fontWeight: FontWeight.w700,
@@ -111,7 +273,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            '12',
+                            formatSecond(totalSeconds),
                             style: TextStyle(
                               color: Theme.of(context).colorScheme.background,
                               fontWeight: FontWeight.w700,
@@ -128,10 +290,13 @@ class _HomeScreenState extends State<HomeScreen> {
             flex: 1,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: 5,
+              itemCount: list.length,
               itemBuilder: (context, index) {
                 double itemWidth = MediaQuery.of(context).size.width * 0.175;
-
+                var item = list[index];
+                var value = item['value'];
+                var second = item['second'];
+                var isSelected = item['isSelectd'];
                 return Container(
                     width: itemWidth,
                     margin: const EdgeInsets.symmetric(horizontal: 10.0),
@@ -141,14 +306,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         width: 2,
                       ),
                       borderRadius: BorderRadius.circular(4.0),
+                      color: isSelected
+                          ? Colors.white
+                          : Theme.of(context).colorScheme.background,
                     ),
                     child: Center(
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          handleClickMin(value);
+                        },
                         child: Text(
-                          '25',
+                          formatMin(second),
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.6),
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.background
+                                : Colors.white.withOpacity(0.6),
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -169,10 +341,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: IconButton(
                   iconSize: 50,
                   color: Colors.white,
-                  onPressed: () {},
-                  icon: const Icon(
-                    Icons.play_arrow_rounded,
-                  ),
+                  onPressed: isRunning ? onPausePressed : onStartPressed,
+                  icon: isRunning
+                      ? const Icon(
+                          Icons.pause,
+                        )
+                      : const Icon(
+                          Icons.play_arrow_rounded,
+                        ),
                 ),
               ),
             ),
@@ -186,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       children: [
                         Text(
-                          '0/4',
+                          '$round/4',
                           style: TextStyle(
                             color: Colors.white.withOpacity(
                               0.6,
@@ -215,7 +391,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       children: [
                         Text(
-                          '0/4',
+                          '$goal/12',
                           style: TextStyle(
                             color: Colors.white.withOpacity(
                               0.6,
